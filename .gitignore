@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+artifacts/
+cache/
+typechain-types/
+
+# Hardhat / Foundry
+deployments/localhost.json
+out/
+
+# Circuit artifacts (large, regenerable)
+*.zkey
+*.wasm
+*.r1cs
+*.ptau
+*.sym
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tooling caches
+.opencode/
+.kkirikkiri/
+.claude/

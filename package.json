@@ -1,0 +1,43 @@
+{
+  "name": "si-rvp",
+  "version": "0.1.0",
+  "description": "Single-Instruction Responsive Validity Proof — hybrid optimistic rollup dispute protocol with off-chain bisection and on-demand Groth16 single-step proof.",
+  "private": true,
+  "workspaces": [
+    "contracts",
+    "circuits",
+    "node"
+  ],
+  "scripts": {
+    "compile:contracts": "npm run compile -w contracts",
+    "compile:circuits": "npm run compile -w circuits",
+    "test:contracts": "npm run test -w contracts",
+    "test:circuits": "npm run test -w circuits",
+    "test:node": "npm run test -w node",
+    "test": "npm run test:contracts && npm run test:circuits && npm run test:node",
+    "deploy:sepolia": "npm run deploy:sepolia -w contracts",
+    "demo": "npm run demo -w node",
+    "clean": "npm run clean -w contracts && npm run clean -w circuits"
+  },
+  "keywords": [
+    "optimistic-rollup",
+    "fault-proof",
+    "zero-knowledge",
+    "groth16",
+    "bisection",
+    "ethereum",
+    "layer2",
+    "cannon"
+  ],
+  "author": "Jae-Seung Hwang",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "circomlib": "^2.0.5"
+  },
+  "devDependencies": {
+    "playwright": "^1.58.2"
+  }
+}

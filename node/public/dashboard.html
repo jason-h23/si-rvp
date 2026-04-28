@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SI-RVP Dashboard</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background-color: #0f172a; color: #f1f5f9; font-family: 'Monaco', monospace; }
+    .panel { background-color: #1e293b; border: 1px solid #334155; border-radius: 0.5rem; }
+    .register-cell.changed { background-color: #10b981 !important; color: #0f172a !important; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // Register names
+    const REG_NAMES = ['$zero','$at','$v0','$v1','$a0','$a1','$a2','$a3','$t0','$t1','$t2','$t3','$t4','$t5','$t6','$t7','$s0','$s1','$s2','$s3','$s4','$s5','$s6','$s7','$t8','$t9','$k0','$k1','$gp','$sp','$fp','$ra'];
+
+    // Load data from external JSON (scenarios + on-chain E2E)
+    function App() {
+      const [allData, setAllData] = useState(null);
+      const [error, setError] = useState(null);
+
+      useEffect(() => {
+        const scenariosFetch = fetch('./data/scenarios.json').then(r => r.json());
+        const onchainFetch = fetch('./data/onchain-e2e.json').then(r => r.json()).catch(() => null);
+
+        Promise.all([scenariosFetch, onchainFetch])
+          .then(([scenarios, onchain]) => {
+            const merged = { ...scenarios };
+            if (onchain) {
+              merged.onchain_dispute = onchain;
+            }
+            setAllData(merged);
+          })
+          .catch(e => setError(e.message));
+      }, []);
+
+      if (error) return <div className="min-h-screen flex items-center justify-center text-rose-400">{error}</div>;
+      if (!allData) return <div className="min-h-screen flex items-center justify-center text-emerald-400">Loading...</div>;
+
+      return <Dashboard allData={allData} />;
+    }
+
+    function Dashboard({ allData }) {
+      const [scenario, setScenario] = useState('dispute_early');
+      const [step, setStep] = useState(0);
+      const [playing, setPlaying] = useState(false);
+      const [speed, setSpeed] = useState(800);
+      const [proofProgress, setProofProgress] = useState(0);
+      const [proofDone, setProofDone] = useState(false);
+
+      const data = allData[scenario];
+      const maxStep = data.instructions.length;
+
+      // Parse state - convert string numbers to BigInt for display
+      const parseRegs = (regs) => regs.map(r => BigInt(r));
+      const seqState = data.sequencerStates[step];
+      const chalState = data.challengerStates[step];
+      const prevSeqState = step > 0 ? data.sequencerStates[step - 1] : null;
+      const prevChalState = step > 0 ? data.challengerStates[step - 1] : null;
+
+      // Auto-play
+      useEffect(() => {
+        if (!playing) return;
+        const timer = setInterval(() => {
+          setStep(s => {
+            if (s >= maxStep) { setPlaying(false); return s; }
+            return s + 1;
+          });
+        }, speed);
+        return () => clearInterval(timer);
+      }, [playing, speed, maxStep]);
+
+      // Reset on scenario change
+      useEffect(() => {
+        setStep(0);
+        setPlaying(false);
+        setProofProgress(0);
+        setProofDone(false);
+      }, [scenario]);
+
+      // Proof generation simulation
+      useEffect(() => {
+        if (scenario === 'happy_path' || step < maxStep) {
+          setProofProgress(0);
+          setProofDone(false);
+          return;
+        }
+        // Start proof generation when step reaches max
+        let progress = 0;
+        const interval = setInterval(() => {
+          progress += 100 / 150; // 15 seconds
+          setProofProgress(Math.min(progress, 100));
+          if (progress >= 100) {
+            clearInterval(interval);
+            setTimeout(() => setProofDone(true), 2000);
+          }
+        }, 100);
+        return () => clearInterval(interval);
+      }, [step, maxStep, scenario]);
+
+      const channelStatus = () => {
+        if (scenario === 'happy_path') return 'resolved';
+        if (step === 0) return 'open';
+        if (step < maxStep) return 'bisecting';
+        if (!proofDone) return 'awaiting_proof';
+        return 'resolved';
+      };
+
+      return (
+        <div className="p-4 max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="panel p-4 mb-4 flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl text-emerald-500 font-bold">SI-RVP</span>
+              <span className="text-slate-500 text-sm">ZK State Channel Dashboard</span>
+              <span className="bg-emerald-500/20 text-emerald-400 text-xs px-2 py-1 rounded">Real Data</span>
+              {scenario === 'onchain_dispute' && <span className="bg-amber-500/20 text-amber-400 text-xs px-2 py-1 rounded">On-chain</span>}
+            </div>
+            <div className="flex items-center gap-4">
+              <select value={scenario} onChange={e => setScenario(e.target.value)} className="bg-slate-700 rounded px-3 py-1">
+                <option value="happy_path">Happy Path</option>
+                <option value="dispute_early">Dispute Early (Step 3)</option>
+                <option value="dispute_late">Dispute Late (Step 7)</option>
+                {allData.onchain_dispute && <option value="onchain_dispute">On-chain Dispute</option>}
+              </select>
+              <div className="flex gap-1 bg-slate-700 rounded p-1">
+                <button onClick={() => setStep(Math.max(0, step-1))} className="px-2 hover:bg-slate-600 rounded">◀</button>
+                <button onClick={() => setPlaying(!playing)} className="px-2 hover:bg-slate-600 rounded">{playing ? '⏸' : '▶'}</button>
+                <button onClick={() => setStep(Math.min(maxStep, step+1))} className="px-2 hover:bg-slate-600 rounded">▶</button>
+                <button onClick={() => { setStep(0); setProofDone(false); setProofProgress(0); }} className="px-2 hover:bg-slate-600 rounded">↻</button>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500">Speed:</span>
+                <input type="range" min="100" max="2000" value={2100-speed} onChange={e => setSpeed(2100-Number(e.target.value))} className="w-20"/>
+              </div>
+              <div className="bg-slate-700 px-3 py-1 rounded">
+                Step <span className="text-emerald-400 font-bold">{step}</span>/{maxStep}
+              </div>
+            </div>
+          </div>
+
+          {/* Main Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Left Column */}
+            <div className="space-y-4">
+              <StateViewer title="Sequencer" state={seqState} prevState={prevSeqState} color="emerald" />
+              <StateViewer title="Challenger" state={chalState} prevState={prevChalState} color="rose" />
+            </div>
+
+            {/* Center Column */}
+            <div className="space-y-4">
+              <BisectionTree nodes={data.bisectionTree.nodes} step={step} disputedStep={data.bisectionTree.disputedStep} />
+              <ChannelStatus status={channelStatus()} discrepancy={data.discrepancyStep} />
+              <Instructions list={data.instructions} currentStep={step} />
+            </div>
+
+            {/* Right Column */}
+            <div className="space-y-4">
+              <ProofViewer scenario={scenario} step={step} maxStep={maxStep} progress={proofProgress} done={proofDone} />
+              {scenario === 'onchain_dispute' && data.onchain && <OnChainPanel data={data.onchain} />}
+              <Metrics data={data.metrics} isOnchain={scenario === 'onchain_dispute'} />
+            </div>
+          </div>
+
+          <footer className="mt-6 text-center text-xs text-slate-600">
+            SI-RVP | Generated: {data.generatedAt?.slice(0,10)}
+          </footer>
+        </div>
+      );
+    }
+
+    function StateViewer({ title, state, prevState, color }) {
+      const regs = state.registers;
+      const prevRegs = prevState?.registers || regs;
+      const changed = new Set();
+      for (let i = 0; i < 32; i++) {
+        if (regs[i] !== prevRegs[i]) changed.add(i);
+      }
+
+      return (
+        <div className={`panel p-4 border-l-4 border-${color}-500/50`}>
+          <h3 className={`text-sm font-bold text-${color}-400 mb-3`}>{title} State</h3>
+          <div className="grid grid-cols-4 gap-2 mb-3 text-xs">
+            <div className="bg-slate-700/50 p-2 rounded"><span className="text-slate-500">PC</span><div className="text-emerald-400">{state.pc}</div></div>
+            <div className="bg-slate-700/50 p-2 rounded"><span className="text-slate-500">Step</span><div className="text-emerald-400">{state.step}</div></div>
+            <div className="bg-slate-700/50 p-2 rounded"><span className="text-slate-500">HI</span><div className="text-emerald-400">{state.hi}</div></div>
+            <div className="bg-slate-700/50 p-2 rounded"><span className="text-slate-500">LO</span><div className="text-emerald-400">{state.lo}</div></div>
+          </div>
+          <div className="grid grid-cols-8 gap-1 text-xs">
+            {regs.map((v, i) => (
+              <div key={i} className={`register-cell p-1 rounded text-center ${changed.has(i) ? 'changed' : 'bg-slate-700/50'}`}>
+                <div className="text-slate-500 text-[10px]">{REG_NAMES[i]}</div>
+                <div className="truncate">{v}</div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 text-xs text-slate-500 truncate">Hash: {state.stateHash?.slice(0,24)}...</div>
+        </div>
+      );
+    }
+
+    function BisectionTree({ nodes, step, disputedStep }) {
+      const visible = nodes.slice(0, Math.max(1, Math.floor(step / 2)));
+      if (nodes.length === 0) {
+        return (
+          <div className="panel p-4">
+            <h3 className="text-sm font-bold text-purple-400 mb-3">Bisection Tree</h3>
+            <div className="flex flex-col items-center justify-center h-32 text-emerald-400">
+              <span className="text-4xl mb-2">✓</span>
+              <span>No Dispute - Happy Path!</span>
+            </div>
+          </div>
+        );
+      }
+      return (
+        <div className="panel p-4">
+          <h3 className="text-sm font-bold text-purple-400 mb-3">Bisection Tree <span className="text-slate-500 font-normal">Disputed: Step {disputedStep}</span></h3>
+          <div className="space-y-2">
+            {visible.map(n => (
+              <div key={n.id} className={`p-2 rounded text-xs ${n.match ? 'bg-emerald-500/20 border border-emerald-500/50' : 'bg-rose-500/20 border border-rose-500/50'}`}>
+                <span className={n.match ? 'text-emerald-400' : 'text-rose-400'}>{n.match ? '✓' : '✗'}</span>
+                {' '}Step {n.mid} [{n.left}-{n.right}] D{n.depth}
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-4 mt-3 text-xs">
+            <span><span className="inline-block w-3 h-3 bg-emerald-500 rounded mr-1"></span>Agreement</span>
+            <span><span className="inline-block w-3 h-3 bg-rose-500 rounded mr-1"></span>Disagreement</span>
+          </div>
+        </div>
+      );
+    }
+
+    function ChannelStatus({ status, discrepancy }) {
+      const steps = ['open', 'bisecting', 'awaiting_proof', 'resolved'];
+      const idx = steps.indexOf(status);
+      return (
+        <div className="panel p-4">
+          <h3 className="text-sm font-bold text-amber-400 mb-3">Channel Status</h3>
+          <div className="flex items-center justify-between mb-3">
+            {steps.map((s, i) => (
+              <React.Fragment key={s}>
+                <div className="flex flex-col items-center">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${i <= idx ? 'bg-emerald-500' : 'bg-slate-700'}`}>
+                    {i <= idx ? '✓' : i+1}
+                  </div>
+                  <span className="text-xs mt-1">{s.replace('_',' ')}</span>
+                </div>
+                {i < 3 && <div className={`flex-1 h-1 mx-1 ${i < idx ? 'bg-emerald-500' : 'bg-slate-700'}`}/>}
+              </React.Fragment>
+            ))}
+          </div>
+          <div className="text-xs text-slate-500">Disputed Step: <span className="text-amber-400">{discrepancy >= 0 ? discrepancy : 'N/A'}</span></div>
+        </div>
+      );
+    }
+
+    function Instructions({ list, currentStep }) {
+      return (
+        <div className="panel p-4">
+          <h3 className="text-sm font-bold text-blue-400 mb-3">Instructions</h3>
+          <div className="space-y-1 max-h-48 overflow-y-auto">
+            {list.map((inst, i) => (
+              <div key={i} className={`p-2 rounded text-xs font-mono ${i === currentStep - 1 ? 'bg-emerald-500/20 border border-emerald-500' : i < currentStep - 1 ? 'bg-slate-700/30 text-slate-500' : 'bg-slate-700/50'}`}>
+                <span className="text-slate-500">{i+1}.</span> <span className={i === currentStep - 1 ? 'text-emerald-400' : 'text-blue-400'}>{inst.op}</span> {inst.desc}
+                {i === currentStep - 1 && <span className="float-right text-emerald-400">◀</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    function ProofViewer({ scenario, step, maxStep, progress, done }) {
+      const generating = scenario !== 'happy_path' && step >= maxStep && !done;
+      return (
+        <div className="panel p-4">
+          <h3 className="text-sm font-bold text-cyan-400 mb-3">ZK Proof</h3>
+          {scenario === 'happy_path' ? (
+            <div className="text-center text-slate-500 py-8">No proof needed</div>
+          ) : step < maxStep ? (
+            <div className="text-center text-slate-500 py-8">Waiting for bisection...</div>
+          ) : generating ? (
+            <div>
+              <div className="flex items-center gap-2 text-amber-400 mb-3">
+                <span className="animate-spin">⏳</span> Generating Proof...
+              </div>
+              <div className="h-2 bg-slate-700 rounded-full overflow-hidden mb-2">
+                <div className="h-full bg-amber-500 transition-all" style={{width: `${progress}%`}}/>
+              </div>
+              <div className="text-xs text-slate-500">{progress.toFixed(1)}% - ETA: {Math.max(0, 15 - progress/100*15).toFixed(0)}s</div>
+              <div className="mt-3 bg-slate-900 rounded p-2 text-xs font-mono text-amber-400">
+                {progress < 30 && 'Computing witness...'}
+                {progress >= 30 && progress < 60 && 'FFT on evaluation domain...'}
+                {progress >= 60 && progress < 90 && 'Multi-scalar multiplication...'}
+                {progress >= 90 && 'Finalizing proof...'}
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div className="flex items-center gap-2 text-emerald-400 mb-3">✓ Proof Verified!</div>
+              <div className="bg-slate-900 rounded p-2 text-xs font-mono text-cyan-400">
+                a: [0x1a2b...3c4d]<br/>
+                b: [[0x5e6f...], [0x7g8h...]]<br/>
+                c: [0x9i0j...klmn]
+              </div>
+              <div className="mt-2 text-xs text-slate-500">Circuit: MIPS Step Verifier | ~65K constraints</div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function OnChainPanel({ data }) {
+      const truncAddr = (addr) => addr.slice(0, 6) + '...' + addr.slice(-4);
+      const truncHash = (hash) => hash.slice(0, 10) + '...' + hash.slice(-6);
+      const formatGas = (gas) => Number(gas).toLocaleString();
+
+      return (
+        <div className="panel p-4 border-l-4 border-amber-500/50">
+          <h3 className="text-sm font-bold text-amber-400 mb-3">On-chain Data</h3>
+
+          <div className="space-y-3 text-xs">
+            {/* Network */}
+            <div>
+              <div className="text-slate-500 mb-1">Network</div>
+              <div className="flex gap-2">
+                <span className="bg-slate-700/50 px-2 py-1 rounded">{data.network}</span>
+                <span className="bg-slate-700/50 px-2 py-1 rounded">Chain {data.chainId}</span>
+              </div>
+            </div>
+
+            {/* Contracts */}
+            <div>
+              <div className="text-slate-500 mb-1">Contracts</div>
+              <div className="space-y-1">
+                {Object.entries(data.contracts).map(([name, addr]) => (
+                  <div key={name} className="flex justify-between bg-slate-700/30 px-2 py-1 rounded">
+                    <span className="text-blue-400">{name}</span>
+                    <span className="text-slate-400 font-mono">{truncAddr(addr)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Participants */}
+            <div>
+              <div className="text-slate-500 mb-1">Participants</div>
+              <div className="space-y-1">
+                <div className="flex justify-between bg-slate-700/30 px-2 py-1 rounded">
+                  <span className="text-emerald-400">Sequencer</span>
+                  <span className="text-slate-400 font-mono">{truncAddr(data.participants.sequencer)}</span>
+                </div>
+                <div className="flex justify-between bg-slate-700/30 px-2 py-1 rounded">
+                  <span className="text-rose-400">Challenger</span>
+                  <span className="text-slate-400 font-mono">{truncAddr(data.participants.challenger)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Dispute Info */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-slate-700/50 p-2 rounded text-center">
+                <div className="text-slate-500">Dispute ID</div>
+                <div className="text-amber-400 font-bold">{data.disputeId}</div>
+              </div>
+              <div className="bg-slate-700/50 p-2 rounded text-center">
+                <div className="text-slate-500">Status</div>
+                <div className="text-emerald-400 font-bold">{data.disputeStatus}</div>
+              </div>
+              <div className="bg-slate-700/50 p-2 rounded text-center">
+                <div className="text-slate-500">Bond</div>
+                <div className="text-cyan-400 font-bold">{data.bondAmount} ETH</div>
+              </div>
+            </div>
+
+            {/* Transactions */}
+            <div>
+              <div className="text-slate-500 mb-1">Transactions ({data.transactions.length})</div>
+              <div className="space-y-1">
+                {data.transactions.map((tx, i) => (
+                  <div key={i} className="flex items-center justify-between bg-slate-700/30 px-2 py-1 rounded">
+                    <span className="text-blue-400 w-36 truncate">{tx.name}</span>
+                    <span className="text-slate-500 font-mono">{truncHash(tx.hash)}</span>
+                    <span className="text-amber-400">{formatGas(tx.gasUsed)}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-between mt-1 px-2 py-1 bg-amber-500/10 border border-amber-500/30 rounded font-bold">
+                <span className="text-amber-400">Total Gas</span>
+                <span className="text-amber-400">{formatGas(data.totalGas)}</span>
+              </div>
+            </div>
+
+            {/* Proof */}
+            <div className="flex items-center gap-2">
+              <span className={data.proofValid ? 'text-emerald-400' : 'text-rose-400'}>
+                {data.proofValid ? '✓' : '✗'}
+              </span>
+              <span>ZK Proof {data.proofValid ? 'Valid' : 'Invalid'}</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function Metrics({ data, isOnchain }) {
+      const gasBreakdown = isOnchain && data.zkChannel?.gasBreakdown;
+      const zkTotalGas = data.zkChannel?.totalGas || 750000;
+      const tradTotalGas = data.traditional?.totalGas || 3650000;
+      const formatGasK = (gas) => gas >= 1000000 ? (gas / 1000000).toFixed(2) + 'M' : (gas / 1000).toFixed(0) + 'K';
+      const formatTime = (ms) => {
+        if (ms >= 86400000) return Math.round(ms / 86400000) + ' days';
+        if (ms >= 3600000) return Math.round(ms / 3600000) + ' hrs';
+        if (ms >= 1000) return '~' + Math.round(ms / 1000) + 's';
+        return ms + 'ms';
+      };
+
+      return (
+        <div className="panel p-4">
+          <h3 className="text-sm font-bold text-rose-400 mb-3">Performance Comparison</h3>
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded p-2 text-center">
+              <div className="text-xl font-bold text-emerald-400">{data.improvements.timeReduction}%</div>
+              <div className="text-xs text-slate-500">Time Saved</div>
+            </div>
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded p-2 text-center">
+              <div className="text-xl font-bold text-blue-400">{data.improvements.messageReduction}%</div>
+              <div className="text-xs text-slate-500">Fewer Msgs</div>
+            </div>
+            <div className="bg-purple-500/10 border border-purple-500/30 rounded p-2 text-center">
+              <div className="text-xl font-bold text-purple-400">{data.improvements.gasReduction}%</div>
+              <div className="text-xs text-slate-500">Gas Saved</div>
+            </div>
+          </div>
+
+          {gasBreakdown ? (
+            <div className="text-xs space-y-1">
+              <div className="text-slate-500 mb-1">Gas Breakdown (Real On-chain Data)</div>
+              {gasBreakdown.map((tx, i) => {
+                const pct = (Number(tx.gasUsed) / zkTotalGas * 100).toFixed(1);
+                return (
+                  <div key={i} className="space-y-0.5">
+                    <div className="flex justify-between">
+                      <span className="text-blue-400">{tx.name}</span>
+                      <span className="text-slate-400">{Number(tx.gasUsed).toLocaleString()} ({pct}%)</span>
+                    </div>
+                    <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                      <div className="h-full bg-amber-500 rounded-full" style={{width: `${pct}%`}}/>
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="flex justify-between mt-2 pt-1 border-t border-slate-700">
+                <span className="text-slate-400">Total</span>
+                <span className="text-amber-400 font-bold">{Number(zkTotalGas).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Traditional (est.)</span>
+                <span className="text-rose-400">{formatGasK(tradTotalGas)}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="text-xs space-y-1">
+              <div className="grid grid-cols-4 gap-1 text-slate-500"><span>Metric</span><span>Trad</span><span>ZK</span><span>Diff</span></div>
+              <div className="grid grid-cols-4 gap-1"><span className="text-slate-400">Time</span><span className="text-rose-400">{formatTime(data.traditional.disputeTime)}</span><span className="text-emerald-400">{formatTime(data.zkChannel.disputeTime)}</span><span className="text-purple-400">-{data.improvements.timeReduction}%</span></div>
+              <div className="grid grid-cols-4 gap-1"><span className="text-slate-400">Msgs</span><span className="text-rose-400">{data.traditional.onChainMessages}</span><span className="text-emerald-400">{data.zkChannel.onChainMessages}</span><span className="text-purple-400">-{data.improvements.messageReduction}%</span></div>
+              <div className="grid grid-cols-4 gap-1"><span className="text-slate-400">Gas</span><span className="text-rose-400">{formatGasK(data.traditional.totalGas)}</span><span className="text-emerald-400">{formatGasK(data.zkChannel.totalGas)}</span><span className="text-purple-400">-{data.improvements.gasReduction}%</span></div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

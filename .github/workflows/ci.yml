@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compile contracts
+        run: npm run compile:contracts
+
+      - name: Contract tests
+        run: npm run test:contracts
+
+      - name: Node-workspace tests
+        working-directory: node
+        run: npx mocha -r ts-node/register 'test/**/*.test.ts' --timeout 60000
+        # Circuit compilation requires Powers of Tau download (~5-15 min) and
+        # GPU/CPU intensive Phase-2 contribution; circuit tests run locally only.
+        # See docs/reproducibility.md for the local circuit build steps.
