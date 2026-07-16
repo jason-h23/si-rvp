@@ -537,7 +537,7 @@ async function main() {
   const proofTime = Date.now() - proofStart;
 
   printSuccess(`ZK proof generated in ${proofTime}ms`);
-  printInfo(`Public signals: preHash=${publicSignals[0].slice(0, 10)}..., postHash=${publicSignals[1].slice(0, 10)}...`);
+  printInfo(`Public signals: valid=${publicSignals[0]}, preHash=${publicSignals[1].slice(0, 10)}..., postHash=${publicSignals[2].slice(0, 10)}...`);
 
   // ============================================
   // Step 8: Verify Proof On-chain

@@ -348,15 +348,16 @@ describe("DisputeManager", function () {
     const disputedStep = 42;
 
     // Public inputs used in proof submission — bisectionCommitment is derived from these.
-    // This ensures the on-chain binding check passes: keccak256(inputs[0], inputs[1], step)
+    // snarkjs public-signal order: [0]=valid (circuit output), [1]=preStateHash, [2]=postStateHash.
+    // This ensures the on-chain binding check passes: keccak256(inputs[1], inputs[2], step)
     const validPublicInputs = [1n, 2n, 3n];
 
     // Compute bisectionCommitment to match the binding formula in submitProof:
-    // keccak256(abi.encodePacked(publicInputs[0], publicInputs[1], disputedSteps[disputeId]))
+    // keccak256(abi.encodePacked(publicInputs[1], publicInputs[2], disputedSteps[disputeId]))
     const bisectionCommitment = ethers.keccak256(
       ethers.solidityPacked(
         ["uint256", "uint256", "uint256"],
-        [validPublicInputs[0], validPublicInputs[1], disputedStep]
+        [validPublicInputs[1], validPublicInputs[2], disputedStep]
       )
     );
 

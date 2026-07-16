@@ -250,7 +250,7 @@ contract DisputeManager is IDisputeManager, ReentrancyGuard {
         );
         // Verify proof binds to agreed bisection result
         bytes32 expectedCommitment = keccak256(
-            abi.encodePacked(publicInputs[0], publicInputs[1], disputedSteps[disputeId])
+            abi.encodePacked(publicInputs[1], publicInputs[2], disputedSteps[disputeId])
         );
         require(
             expectedCommitment == dispute.bisectionCommitment,

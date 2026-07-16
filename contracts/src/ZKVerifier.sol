@@ -9,10 +9,11 @@ import "./Groth16Verifier.sol";
  * @notice Wrapper contract for Groth16Verifier
  * @dev Implements IZKVerifier interface and internally calls snarkjs-generated verifier
  *
- * Public inputs (MIPS Single Step):
- * - publicInputs[0]: preStateHash (previous state hash)
- * - publicInputs[1]: postStateHash (post state hash)
- * - publicInputs[2]: valid (verification result, circuit output)
+ * Public inputs (MIPS Single Step, snarkjs public-signal order —
+ * circuit outputs precede public inputs):
+ * - publicInputs[0]: valid (circuit output, 1 iff the step re-executes correctly)
+ * - publicInputs[1]: preStateHash (Poseidon hash of the pre-state)
+ * - publicInputs[2]: postStateHash (Poseidon hash of the post-state)
  */
 contract ZKVerifier is IZKVerifier {
     /// @notice Internal Groth16 verifier

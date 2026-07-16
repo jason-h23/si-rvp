@@ -4,7 +4,7 @@
  * Verifies the off-chain bisection commitment matches the canonical
  * on-chain formula in DisputeManager.sol:252-254:
  *
- *   keccak256(abi.encodePacked(publicInputs[0], publicInputs[1], disputedStep))
+ *   keccak256(abi.encodePacked(publicInputs[1], publicInputs[2], disputedStep))
  *
  * where publicInputs[0..1] are Poseidon-hashed pre/post MIPS states
  * (uint256 BN254 field elements emitted by the ZK circuit).

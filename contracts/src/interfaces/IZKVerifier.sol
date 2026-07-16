@@ -18,10 +18,11 @@ interface IZKVerifier {
      *
      * @dev Expected gas: ~280,000
      *
-     * Public inputs structure (MIPS Single Step):
-     * - publicInputs[0]: preStateHash (previous state hash)
-     * - publicInputs[1]: postStateHash (post state hash)
-     * - publicInputs[2]: instruction (MIPS instruction)
+     * Public inputs structure (MIPS Single Step, snarkjs public-signal
+     * order — circuit outputs precede public inputs):
+     * - publicInputs[0]: valid (circuit output)
+     * - publicInputs[1]: preStateHash (Poseidon hash of the pre-state)
+     * - publicInputs[2]: postStateHash (Poseidon hash of the post-state)
      */
     function verifyProof(
         uint256[2] calldata a,

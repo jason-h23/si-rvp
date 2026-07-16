@@ -436,7 +436,7 @@ async function runDemo(): Promise<void> {
   );
   const proofTime = Date.now() - proofStart;
   console.log(`   Proof generated in ${proofTime}ms`);
-  console.log(`   Public signals: preHash=${publicSignals[0].slice(0, 10)}..., postHash=${publicSignals[1].slice(0, 10)}...`);
+  console.log(`   Public signals: valid=${publicSignals[0]}, preHash=${publicSignals[1].slice(0, 10)}..., postHash=${publicSignals[2].slice(0, 10)}...`);
 
   // Format for on-chain verification
   const a: [bigint, bigint] = [BigInt(proof.pi_a[0]), BigInt(proof.pi_a[1])];
