@@ -19,6 +19,22 @@ out/
 *.ptau
 *.sym
 
+# Published proving/verifying artifacts for the MIPS single-step circuit.
+# These are deliberately tracked so the deployed Groth16Verifier can be
+# re-derived and proofs re-verified without re-running the trusted setup
+# (a fresh setup produces a different delta, hence a different verifier).
+# The .ptau stays untracked: see circuits/README.md for its source + hash.
+!circuits/build/
+circuits/build/*
+!circuits/build/mips_single_step.r1cs
+!circuits/build/mips_single_step_final.zkey
+!circuits/build/verification_key.json
+!circuits/build/mips_single_step_js/
+circuits/build/mips_single_step_js/*
+!circuits/build/mips_single_step_js/mips_single_step.wasm
+!circuits/build/mips_single_step_js/generate_witness.js
+!circuits/build/mips_single_step_js/witness_calculator.js
+
 # Environment
 .env
 .env.*
