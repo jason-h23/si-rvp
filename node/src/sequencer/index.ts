@@ -257,12 +257,21 @@ export class SequencerNode implements P2PMessageHandler {
       return;
     }
 
-    // Record move
+    // Record move. ChannelManager replaces the stored channel with a new
+    // object on every mutation, so the pre-addMove snapshot above does not
+    // contain this move — re-read before inspecting the move history.
     this.channelManager.addMove(move.disputeId, move);
+    const channelWithMove = this.channelManager.getChannel(move.disputeId);
+    if (!channelWithMove) {
+      throw new Error(`Sequencer: channel ${move.disputeId} disappeared after addMove`);
+    }
 
     // Check if we've reached a single step
-    if (move.depth >= channel.maxDepth - 1 || this.isDisputeNarrowedToSingleStep(channel)) {
-      await this.handleBisectionComplete(channel, from);
+    if (
+      move.depth >= channelWithMove.maxDepth - 1 ||
+      this.isDisputeNarrowedToSingleStep(channelWithMove)
+    ) {
+      await this.handleBisectionComplete(channelWithMove, from);
       return;
     }
 

@@ -311,11 +311,16 @@ export class ChallengerNode implements P2PMessageHandler {
       return;
     }
 
-    // Record move
+    // Record move, then re-read: ChannelManager replaces the stored channel
+    // with a new object on every mutation, so the cached reference above does
+    // not contain this move.
     this.channelManager.addMove(move.disputeId, move);
+    const channelWithMove = this.refreshCurrentChannel();
 
     // Check if we've found the disputed step
-    const lastAttack = channel.moves?.filter((m: BisectionMove) => m.type === 'attack').pop();
+    const lastAttack = channelWithMove.moves
+      ?.filter((m: BisectionMove) => m.type === 'attack')
+      .pop();
     if (lastAttack && lastAttack.claim.stateHash !== move.claim.stateHash) {
       // Found disagreement - this is our disputed step
       this.currentDispute.disputedStep = move.position;
@@ -325,7 +330,7 @@ export class ChallengerNode implements P2PMessageHandler {
     }
 
     // Check if max depth reached
-    if (move.depth >= channel.maxDepth - 1) {
+    if (move.depth >= channelWithMove.maxDepth - 1) {
       logger.info('Challenger', 'Max depth reached, requesting proof');
       this.currentDispute.disputedStep = move.position;
       await this.requestProof();
@@ -375,6 +380,26 @@ export class ChallengerNode implements P2PMessageHandler {
   }
 
   /**
+   * Re-read the current dispute's channel from the manager and replace the
+   * cached copy. ChannelManager returns a new object on every mutation, so a
+   * cached reference goes stale as soon as a move is recorded.
+   */
+  private refreshCurrentChannel(): ChannelState {
+    if (!this.currentDispute) {
+      throw new Error('Challenger: refreshCurrentChannel called with no active dispute');
+    }
+
+    const channelId = this.currentDispute.channel.channelId;
+    const channel = this.channelManager.getChannel(channelId);
+    if (!channel) {
+      throw new Error(`Challenger: channel ${channelId} not found`);
+    }
+
+    this.currentDispute = { ...this.currentDispute, channel };
+    return channel;
+  }
+
+  /**
    * Send attack move
    */
   private async sendAttack(depth: number, position: bigint): Promise<void> {
@@ -398,6 +423,7 @@ export class ChallengerNode implements P2PMessageHandler {
     );
 
     this.channelManager.addMove(channel.channelId, attackMove);
+    this.refreshCurrentChannel();
 
     await this.p2pNode.send(channel.sequencer, 'bisection_move', { move: attackMove });
     logger.info('Challenger', `Attack sent at depth ${depth}, position ${position}`);

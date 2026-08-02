@@ -7,6 +7,7 @@ import { ethers } from 'ethers';
 import { SequencerNode } from '../src/sequencer/index';
 import { MipsExecutor, MipsInstructionBuilder } from '../src/common/mips';
 import { BisectionProtocol, ChannelManager } from '../src/common/bisection';
+import { ProgramExecutor } from '../src/common/executor';
 import { MipsState, ZKProof, DEFAULT_CONFIG } from '../src/common/types';
 import { DisputeStatus } from '../src/common/contracts';
 import {
@@ -33,6 +34,13 @@ describe('SequencerNode', () => {
     (node as any).p2pNode = mocks.p2pNode;
     (node as any).zkProver = mocks.zkProver;
     (node as any).poseidonHasher = mocks.poseidonHasher;
+    // The node builds its ProgramExecutor in the constructor, capturing the
+    // real PoseidonHasher; swapping the field above leaves that executor
+    // holding an uninitialised hasher. Rebuild it against the mock.
+    (node as any).programExecutor = new ProgramExecutor(
+      new MipsExecutor(),
+      mocks.poseidonHasher as any
+    );
   });
 
   // ============================================
