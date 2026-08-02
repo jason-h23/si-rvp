@@ -1,0 +1,21 @@
+{
+  "name": "@si-rvp/circuits",
+  "version": "0.1.0",
+  "description": "SI-RVP circom circuits (MIPS single-step verification, Groth16) and proving artifacts",
+  "scripts": {
+    "compile": "node scripts/compile.js",
+    "setup": "node scripts/setup.js",
+    "test": "mocha 'test/**/*.test.js' --timeout 600000",
+    "clean": "rm -f build/mips_single_step.sym build/mips_single_step_0000.zkey"
+  },
+  "devDependencies": {
+    "chai": "^4.3.10",
+    "circom_tester": "^0.0.20",
+    "mocha": "^10.2.0"
+  },
+  "dependencies": {
+    "circomlib": "^2.0.5",
+    "circomlibjs": "^0.1.7",
+    "snarkjs": "^0.7.3"
+  }
+}
