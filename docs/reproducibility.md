@@ -139,6 +139,23 @@ Output is a stable per-operation table that matches Table 1 of
 than ~1% indicate a hardhat or solc version mismatch — the paper used
 solc 0.8.24 with optimizer 200 runs.
 
+## 9. Reproducing the ISA coverage figures
+
+The static MIPS32 instruction-coverage figures (88.0% / 90.9%) come
+from `scripts/mips_histogram.py` run over two stock Debian mipsel
+binaries. Those binaries are not redistributed here; the exact
+packages, their SHA-256 checksums, the download and extraction
+commands, and the recorded outputs are in
+[`docs/isa-coverage/`](isa-coverage/README.md).
+
+```bash
+python3 scripts/mips_histogram.py <path-to-mipsel-elf>
+```
+
+The decoder uses only the Python standard library and is
+deterministic, so a correct run reproduces the recorded outputs
+byte-for-byte.
+
 ## Expected results
 
 | Measurement | Expected value |
@@ -150,6 +167,8 @@ solc 0.8.24 with optimizer 200 runs.
 | Full dispute lifecycle, timeout path (3 tx) | 436,279 |
 | Single-step proof generation (ALU family) | ~700 ms (Apple M-series ARM64) |
 | PoC end-to-end wall-clock | seconds (toy trace) — see §7 |
+| ISA coverage, busybox 1.30.1 mipsel | 88.02% of integer words — see §9 |
+| ISA coverage, dash 0.5.10.2 mipsel | 90.92% of integer words — see §9 |
 
 All gas figures are from the 2026-05-29 post-correction Sepolia
 redeployment. The timeout-path total composes the measured

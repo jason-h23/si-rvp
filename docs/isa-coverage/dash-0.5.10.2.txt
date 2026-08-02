@@ -1,0 +1,45 @@
+file: dash
+.text words: 25,668
+
+category                count   % all  % integer
+--------------------------------------------------
+covered                23,309  90.81%     90.92%
+regimm-branch           1,083   4.22%      4.22%
+partial-mem               639   2.49%      2.49%
+special-other             524   2.04%      2.04%
+special2                   43   0.17%      0.17%
+special3-r2                40   0.16%      0.16%
+fp                         30   0.12%       nan%
+--------------------------------------------------
+covered / all      : 90.81%
+covered / integer  : 90.92%  (excl. FP/COP, cf. softfloat targets)
+
+Top uncovered mnemonics (integer only):
+  BGEZAL         regimm-branch        1,006    3.92%
+  JALR           special-other          445    1.74%
+  LB             partial-mem            286    1.12%
+  SB             partial-mem            190    0.74%
+  BLTZ           regimm-branch           55    0.21%
+  LBU            partial-mem             48    0.19%
+  TEQ            special-other           31    0.12%
+  MOVZ           special-other           28    0.11%
+  MUL            special2                28    0.11%
+  LHU            partial-mem             24    0.09%
+  LH             partial-mem             23    0.09%
+  BGEZ           regimm-branch           22    0.09%
+  SWL            partial-mem             19    0.07%
+  SWR            partial-mem             19    0.07%
+
+Top covered mnemonics:
+  LW                 8,057   31.43%
+  ADDIU              3,560   13.89%
+  SW                 2,880   11.23%
+  OR                 2,479    9.67%
+  BEQ                2,124    8.28%
+  BNE                  943    3.68%
+  SLL                  913    3.56%
+  ADDU                 542    2.11%
+  JR                   332    1.29%
+  LUI                  265    1.03%
+  ANDI                 216    0.84%
+  SUBU                 212    0.83%

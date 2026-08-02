@@ -1,0 +1,45 @@
+file: busybox
+.text words: 208,284
+
+category                count   % all  % integer
+--------------------------------------------------
+covered               182,934  87.83%     88.02%
+special-other          10,080   4.84%      4.85%
+partial-mem             8,459   4.06%      4.07%
+regimm-branch           5,618   2.70%      2.70%
+fp                        462   0.22%       nan%
+special3-r2               397   0.19%      0.19%
+special2                  334   0.16%      0.16%
+--------------------------------------------------
+covered / all      : 87.83%
+covered / integer  : 88.02%  (excl. FP/COP, cf. softfloat targets)
+
+Top uncovered mnemonics (integer only):
+  JALR           special-other        9,276    4.46%
+  BGEZAL         regimm-branch        4,954    2.38%
+  LBU            partial-mem          3,013    1.45%
+  SB             partial-mem          1,917    0.92%
+  LWL            partial-mem            796    0.38%
+  LWR            partial-mem            781    0.38%
+  LHU            partial-mem            388    0.19%
+  LB             partial-mem            385    0.19%
+  SH             partial-mem            380    0.18%
+  SWL            partial-mem            379    0.18%
+  BGEZ           regimm-branch          378    0.18%
+  SWR            partial-mem            378    0.18%
+  MUL            special2               305    0.15%
+  MOVN           special-other          292    0.14%
+
+Top covered mnemonics:
+  LW                58,578   28.19%
+  ADDIU             33,212   15.98%
+  OR                22,063   10.62%
+  SW                20,884   10.05%
+  BEQ               13,898    6.69%
+  BNE                7,413    3.57%
+  SLL                6,659    3.20%
+  ADDU               5,625    2.71%
+  LUI                2,493    1.20%
+  ANDI               2,092    1.01%
+  JR                 2,069    1.00%
+  SUBU               1,207    0.58%

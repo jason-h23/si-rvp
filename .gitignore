@@ -44,6 +44,10 @@ circuits/build/mips_single_step_js/*
 coverage/
 .nyc_output/
 
+# Python bytecode (scripts/ is stdlib-only Python)
+__pycache__/
+*.pyc
+
 # Logs
 *.log
 npm-debug.log*
