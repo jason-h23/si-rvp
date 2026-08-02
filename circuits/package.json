@@ -5,7 +5,7 @@
   "scripts": {
     "compile": "node scripts/compile.js",
     "setup": "node scripts/setup.js",
-    "test": "mocha 'test/**/*.test.js' --timeout 600000",
+    "test": "mocha 'test/**/*.test.js' --timeout 600000 --exit",
     "clean": "rm -f build/mips_single_step.sym build/mips_single_step_0000.zkey"
   },
   "devDependencies": {
