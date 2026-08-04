@@ -32,6 +32,41 @@ first**, then the public inputs. The on-chain commitment check therefore
 binds `publicInputs[1]` and `publicInputs[2]` (the pre- and post-state
 hashes), not `publicInputs[0]`.
 
+## Known limitation — operand-B domain restriction
+
+`MipsAlu` evaluates all twelve ALU sub-circuits unconditionally and then
+multiplexes their outputs by opcode. The LUI sub-circuit is therefore active
+for *every* instruction, and its `Num2Bits(16)` range-checks the shared
+operand-B bus. Witness generation consequently **fails whenever operand B is
+≥ 2^16**, no matter which operation the opcode selects. Two practical cases hit
+this: R-type instructions whose `rt` register holds a full 32-bit value
+(`AND $3,$1,$2` with `$2 = 0xF0F0F0F0`), and any I-type instruction with a
+*negative* immediate, which reaches the ALU sign-extended to `0xFFFFxxxx` —
+`ADDI $t,$s,-1` included.
+
+The restriction is a **completeness** gap, not a soundness one. An over-tight
+range check can only reject witnesses; it never admits an incorrect one, so
+every proof the deployed verifier accepts still attests to a correctly executed
+step. What it costs is coverage: a dispute over a step outside the domain cannot
+be settled on the proof path and falls back to the protocol's timeout path,
+which is the designed fallback but forfeits the latency benefit that motivates
+the proof path.
+
+Fixing it means gating the LUI range check on the opcode selector so it
+constrains the bus only when LUI is the selected operation. That changes the
+R1CS, which invalidates the published proving key and the deployed
+`Groth16Verifier`: a corrected circuit requires a fresh trusted setup and a
+verifier redeployment. It is therefore left as future work rather than patched
+here — the sources in `src/` are kept byte-identical to the ones backing the
+published artifacts and the on-chain verifier.
+
+`test/mips_alu.test.js` pins the restriction down explicitly. Each affected
+operation has an in-domain semantics test plus a test that *expects* witness
+generation to fail for operand B ≥ 2^16; if a rebuilt circuit ever accepts such
+an input, those tests fail loudly so that the code and the disclosure are
+updated together. The paper discloses the same restriction in its §III-C4
+deviation list.
+
 ## Published artifacts
 
 All paths are relative to this directory.

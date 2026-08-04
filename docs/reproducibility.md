@@ -70,6 +70,17 @@ Runs the contracts test suite (Hardhat + Mocha + Chai), the circuit
 benchmarks, and the off-chain node tests. Total runtime ~3-5 minutes
 after circuits are built.
 
+The circuits workspace alone (`npm run test -w circuits`) is the
+longest leg at roughly 7 minutes and must finish **100 passing, 0
+failing**. Four of those tests assert that witness generation *fails*:
+they document the operand-B domain restriction described under
+[Known limitation](../circuits/README.md#known-limitation--operand-b-domain-restriction)
+— the always-active LUI sub-circuit range-checks the shared operand
+bus, so any step with operand B ≥ 2^16 (including every negative
+sign-extended immediate) is unprovable on the deployed circuit. Those
+four tests failing would mean the circuit no longer matches the
+published artifacts.
+
 ## 6. Local end-to-end (Hardhat)
 
 In one shell, start a local node:
@@ -161,6 +172,7 @@ byte-for-byte.
 | Measurement | Expected value |
 |-------------|----------------|
 | R1CS constraints | 37,026 (16,857 non-linear + 20,169 linear) |
+| `npm run test -w circuits` | 100 passing, 0 failing (~7 min) — see §5 |
 | `submitProof` gas (Groth16 verification tx) | ~279,930 |
 | `submitBisectionResult` gas | ~90,754 |
 | Full dispute lifecycle, proof path (5 tx) | 825,750 |
